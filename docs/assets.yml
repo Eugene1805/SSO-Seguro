@@ -1,0 +1,15 @@
+# Assets Configuration
+# Define los activos de información del proyecto
+
+assets:
+  - name: "Base de datos"
+    type: "Data"
+    classification: "Confidencial"
+  
+  - name: "Servidor de aplicaciones"
+    type: "Infrastructure"
+    classification: "Crítico"
+  
+  - name: "Sistema de autenticación"
+    type: "Service"
+    classification: "Crítico"
