@@ -33,27 +33,33 @@ function App() {
        Aquí es donde se usa el 'token' para pedir los datos reales a la API 
     */
     // eslint-disable-next-line react-hooks/rules-of-hooks
+/* --- ZONA DE INTEGRACIÓN CON BACKEND --- */
     useEffect(() => {
         if (token) {
             setCargandoDatos(true);
-            // EJEMPLO DE FETCH (Descomentar y ajustar cuando exista el backend):
-            /*
-            const url = esDocente ? '/api/profesor/mis-alumnos' : '/api/alumno/mis-calificaciones';
-            fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-                .then(res => res.json())
+            
+            // TU BACKEND ESTÁ CORRIENDO EN LOCALHOST:8080
+            const backendUrl = "http://localhost:8080";
+            
+            const endpoint = esDocente ? '/api/profesor/mis-alumnos' : '/api/alumno/mis-calificaciones';
+            const urlCompleta = `${backendUrl}${endpoint}`;
+
+            fetch(urlCompleta, { headers: { Authorization: `Bearer ${token}` } })
+                .then(res => {
+                    if (!res.ok) throw new Error("Error en la respuesta del servidor");
+                    return res.json();
+                })
                 .then(data => {
                     if (esDocente) setDatosProfesor(data);
                     else setDatosAlumno(data);
                 })
-                .catch(err => console.error(err))
+                .catch(err => {
+                    console.error(err);
+                    // Opcional: mostrar error en UI
+                })
                 .finally(() => setCargandoDatos(false));
-            */
-           
-            // Actualmente se simulamo que terminó de cargar vacío para que no se rompa la UI
-            setCargandoDatos(false);
         }
     }, [token, esDocente]);
-
 
     return (
       <div className="min-h-screen bg-gray-800 flex flex-col">
