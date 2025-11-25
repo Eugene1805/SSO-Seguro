@@ -12,45 +12,61 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*") // Permite que React se conecte sin bloqueos
+@CrossOrigin(origins = {"http://localhost:3000", "https://midominio.lab"}) 
 public class NotasController {
 
     @Autowired private NotaRepository notaRepo;
     @Autowired private AlumnoRepository alumnoRepo;
     @Autowired private ProfesorRepository profesorRepo;
 
-    // --- Endpoint para ALUMNOS ---
+    // --- VISTA ALUMNO ---
     @GetMapping("/alumno/mis-calificaciones")
     @PreAuthorize("hasRole('alumno')")
-    public List<Nota> misNotas(@AuthenticationPrincipal Jwt token) {
+    public List<Map<String, Object>> misNotas(@AuthenticationPrincipal Jwt token) {
         String keycloakId = token.getSubject();
+        
         Alumno alumno = alumnoRepo.findByKeycloakId(keycloakId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alumno no encontrado en BD"));
-        return notaRepo.findByAlumnoId(alumno.getId());
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alumno no registrado. Contacte al Admin."));
+
+        List<Nota> notas = notaRepo.findByAlumnoId(alumno.getId());
+
+        // FIX: Usamos Map.<String, Object>of(...) para evitar errores de tipo
+        return notas.stream().map(nota -> Map.<String, Object>of(
+            "id", nota.getId(),
+            "materia", nota.getMateria().getNombre(),
+            "profesor", nota.getMateria().getProfesor().getNombre(),
+            "calificacion", nota.getCalificacion()
+        )).collect(Collectors.toList());
     }
 
-    // --- Endpoint para DOCENTES ---
+    // --- VISTA DOCENTE ---
     @GetMapping("/profesor/mis-alumnos")
     @PreAuthorize("hasRole('docente')")
     public Map<String, Object> misAlumnos(@AuthenticationPrincipal Jwt token) {
         String keycloakId = token.getSubject();
+        
         Profesor profe = profesorRepo.findByKeycloakId(keycloakId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profesor no encontrado en BD"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profesor no encontrado."));
         
         List<Nota> notasGrupo = notaRepo.findByMateriaProfesorId(profe.getId());
         
-        // Estructura simple para el Frontend
+        String nombreMateria = notasGrupo.isEmpty() ? "Sin Asignación" : notasGrupo.get(0).getMateria().getNombre();
+
+        // FIX: Aquí estaba el error. Agregamos <String, Object> antes de .of
+        List<Map<String, Object>> listaAlumnos = notasGrupo.stream().map(n -> Map.<String, Object>of(
+            "id", n.getAlumno().getId(),
+            "nombre", n.getAlumno().getNombre(),
+            "calificacion", n.getCalificacion(),
+            "aprobado", n.getCalificacion().doubleValue() >= 6.0
+        )).collect(Collectors.toList());
+
         return Map.of(
-            "materiaImpartida", "Ciencias Computacionales", // Podrías sacarlo dinámicamente de la lista
-            "alumnos", notasGrupo.stream().map(n -> Map.of(
-                "id", n.getAlumno().getId(),
-                "nombre", n.getAlumno().getNombre(),
-                "calificacion", n.getCalificacion(),
-                "aprobado", n.getCalificacion().doubleValue() >= 6.0
-            )).toList()
+            "materiaImpartida", nombreMateria,
+            "alumnos", listaAlumnos
         );
     }
 }
