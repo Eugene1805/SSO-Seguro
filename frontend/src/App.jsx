@@ -97,7 +97,11 @@ function App() {
           </div>
           <div className="w-1/3 flex justify-end">
             <button
-              onClick={() => auth.removeUser()}
+              onClick={() =>
+                auth.signoutRedirect({
+                  post_logout_redirect_uri: window.location.origin,
+                })
+              }
               className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded shadow transition duration-200 border border-red-800"
             >
               Cerrar Sesion
